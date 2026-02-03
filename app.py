@@ -1,38 +1,33 @@
 import streamlit as st
 import os
-from dotenv import load_dotenv
+from groq import Groq
 
-# Load environment variables
-load_dotenv()
-
-# Get API key
-api_key = os.getenv("GROQ_API_KEY")
-
-if not api_key:
-    st.error("❌ GROQ API key not found. Please check your .env file.")
-    st.stop()
-
-# Initialize Groq client
-client = Groq(api_key=api_key)
-
-# Page config
+# ---------------- CONFIG ----------------
 st.set_page_config(
     page_title="AI Cold Email Generator",
     page_icon="📧",
     layout="centered"
 )
 
-# App title
 st.title("📧 AI Cold Email Generator")
 
-# ----------- INPUT FIELDS -----------
+# ---------------- API KEY ----------------
+api_key = os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    st.error("❌ GROQ API key not found. Please add it in Streamlit Secrets.")
+    st.stop()
+
+client = Groq(api_key=api_key)
+
+# ---------------- INPUT FIELDS ----------------
 name = st.text_input("Your Name")
 
 company = st.text_input("Target Company")
 
 purpose = st.text_area(
     "Purpose of Email",
-    placeholder="e.g. Applying for a Python Developer role"
+    placeholder="e.g. Applying for Python Developer role"
 )
 
 skills = st.text_area(
@@ -42,10 +37,10 @@ skills = st.text_area(
 
 job_description = st.text_area(
     "Job Description (Optional)",
-    placeholder="Paste the job description here (optional)"
+    placeholder="Paste job description here (optional)"
 )
 
-# ----------- BUTTON ACTION -----------
+# ---------------- BUTTON ACTION ----------------
 if st.button("Generate Cold Email"):
     if not name or not company or not purpose or not skills:
         st.warning("⚠️ Please fill all required fields (Name, Company, Purpose, Skills)")
@@ -66,7 +61,8 @@ Job Description:
 Instructions:
 - Keep the email short and convincing
 - Highlight how my skills match the company or job
-- End with a polite call to action
+- Use a polite and confident tone
+- End with a clear call to action
 """
 
         try:
@@ -81,9 +77,8 @@ Instructions:
             st.text_area(
                 "Email Output",
                 response.choices[0].message.content,
-                height=300
+                height=320
             )
 
         except Exception as e:
-            st.error(f"❌ Error generating email: {e}")
-
+            st.error(f"❌ Error generating emai
