@@ -1,86 +1,89 @@
-from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
+import streamlit as st
+import os
+from dotenv import load_dotenv
+from groq import Groq
 
-app = Flask(__name__)
-DB_NAME = 'database.db'
+# Load environment variables
+load_dotenv()
 
-# Database init
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tasks(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL,
-            status TEXT DEFAULT 'Pending'
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# Get API key
+api_key = os.getenv("GROQ_API_KEY")
 
-init_db()
+if not api_key:
+    st.error("❌ GROQ API key not found. Please check your .env file.")
+    st.stop()
 
-# Home / Task List
-@app.route('/')
-def index():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM tasks')
-    tasks = cursor.fetchall()
-    conn.close()
-    return render_template('index.html', tasks=tasks)
+# Initialize Groq client
+client = Groq(api_key=api_key)
 
-# Add Task
-@app.route('/add', methods=['GET', 'POST'])
-def add_task():
-    if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO tasks(title, description) VALUES (?, ?)', (title, description))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('index'))
-    return render_template('add.html')
+# Page config
+st.set_page_config(
+    page_title="AI Cold Email Generator",
+    page_icon="📧",
+    layout="centered"
+)
 
-# Edit Task
-@app.route('/edit/<int:id>', methods=['GET', 'POST'])
-def edit_task(id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        cursor.execute('UPDATE tasks SET title=?, description=? WHERE id=?', (title, description, id))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('index'))
-    cursor.execute('SELECT * FROM tasks WHERE id=?', (id,))
-    task = cursor.fetchone()
-    conn.close()
-    return render_template('edit.html', task=task)
+# App title
+st.title("📧 AI Cold Email Generator")
 
-# Delete Task
-@app.route('/delete/<int:id>')
-def delete_task(id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM tasks WHERE id=?', (id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index'))
+# ----------- INPUT FIELDS -----------
+name = st.text_input("Your Name")
 
-# Mark Complete
-@app.route('/complete/<int:id>')
-def complete_task(id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('UPDATE tasks SET status="Completed" WHERE id=?', (id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index'))
+company = st.text_input("Target Company")
 
-if __name__ == '__main__':
-    app.run(debug=True)
+purpose = st.text_area(
+    "Purpose of Email",
+    placeholder="e.g. Applying for a Python Developer role"
+)
+
+skills = st.text_area(
+    "Your Skills",
+    placeholder="e.g. Python, Django, Streamlit, APIs, AI"
+)
+
+job_description = st.text_area(
+    "Job Description (Optional)",
+    placeholder="Paste the job description here (optional)"
+)
+
+# ----------- BUTTON ACTION -----------
+if st.button("Generate Cold Email"):
+    if not name or not company or not purpose or not skills:
+        st.warning("⚠️ Please fill all required fields (Name, Company, Purpose, Skills)")
+    else:
+        prompt = f"""
+Write a professional and friendly cold email.
+
+Sender Name: {name}
+Target Company: {company}
+Purpose of Email: {purpose}
+
+My Skills:
+{skills}
+
+Job Description:
+{job_description if job_description else "Not provided"}
+
+Instructions:
+- Keep the email short and convincing
+- Highlight how my skills match the company or job
+- End with a polite call to action
+"""
+
+        try:
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            st.subheader("✅ Generated Cold Email")
+            st.text_area(
+                "Email Output",
+                response.choices[0].message.content,
+                height=300
+            )
+
+        except Exception as e:
+            st.error(f"❌ Error generating email: {e}")
