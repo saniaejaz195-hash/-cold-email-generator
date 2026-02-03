@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-from groq import Groq
 
 # Load environment variables
 load_dotenv()
@@ -87,3 +86,4 @@ Instructions:
 
         except Exception as e:
             st.error(f"❌ Error generating email: {e}")
+
