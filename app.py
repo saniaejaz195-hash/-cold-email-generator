@@ -81,6 +81,8 @@ Instructions:
             )
 
         except Exception as e:
-            st.error(f"❌ Error generating email: {e}")
+           st.error(f"❌ Error generating email: {e}")
+
+
 
 
